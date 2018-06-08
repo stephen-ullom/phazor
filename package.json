@@ -21,6 +21,6 @@
     "author": "Stephen Ullom",
     "license": "ISC",
     "bin": {
-        "web": "index.js"
+        "phazor": "index.js"
     }
 }
