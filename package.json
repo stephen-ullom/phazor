@@ -1,0 +1,26 @@
+{
+    "name": "phazor",
+    "version": "0.1.0",
+    "description": "A quicker PHP syntax similar to Razor Web Pages.",
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/slulego/phazor.git"
+    },
+    "keywords": [
+        "phazor",
+        "php",
+        "compiler",
+        "language",
+        "html",
+        "sass",
+        "typescript",
+        "web",
+        "web pages"
+    ],
+    "author": "Stephen Ullom",
+    "license": "ISC",
+    "bin": {
+        "web": "index.js"
+    }
+}
