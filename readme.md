@@ -2,6 +2,22 @@
 
 A quicker PHP syntax similar to Razor Web Pages.
 
+```html
+<head>
+    ${
+        $title = "I love fruit";
+        $isFruit = true;
+    }
+    <title>$(ucwords($title))</title>
+</head>
+<body>
+    <h1>$title.</h1>
+    $if ($isFruit) {
+        <p>It sure is great!</p>
+    }
+</body>
+```
+
 Install Phazor with NPM ```npm i phazor -g```.
 
 Run the compiler "```phazor sourceFolder destinationFolder```" from the parent directory.
@@ -14,7 +30,7 @@ Run the compiler "```phazor sourceFolder destinationFolder```" from the parent d
 
 Add PHP code using the `$` symbol.
 
-## Code Blocks - `${}`
+## Code Blocks - `${ -php- }`
 
 ```php
 ${ $message = "I like fruit."; }
@@ -48,7 +64,7 @@ Compiles to:
 ```
 
 
-## Statements - `$function () {}`
+## Statements - `$statement ( -parameters- ) { -php- }`
 
 ```html
 $if ($condition == true) {
@@ -59,11 +75,26 @@ $if ($condition == true) {
 Compiles to:
 ```html
 <?php if ($condition == true) { ?>
-    <p>$message</p>
+    <p><?php echo $message; ?></p>
 <?php } ?>
 ```
 
+## Comments - `/* -comment- */`
+
+Comments work the same as multiline php comments.
+
+```html
+${
+    /* Set the price */
+    $cost = "$1.99";
+}
+<h1>Buy Fruit</h1>
+/* How much the fruit will cost */
+<p>That fruit will cost you $cost each.</p>
+```
+
 ## Escape Entity - `$$`
+Escape "$" in HTML.
 
 ```html
 <p>That fruit will cost you $$1.99 each.</p>
@@ -82,9 +113,8 @@ Install Phazor with NPM `npm i phazor -g`.
 
 Create a folder.
 
-Create a **.ph** file inside the folder.
+Create a **.ph** file inside the folder:
 
-**example.ph**
 ```html
 <!DOCTYPE html>
 <html>
