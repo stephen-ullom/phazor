@@ -5,17 +5,11 @@ var parser = require('./parser');
 
 var path = require('path');
 
-try {
-    var sass = require('node-sass');
-} catch (error) {
-    // No sass
-}
+var options = require('./default.json');
 
-try {
-    var typescript = require('typescript');
-} catch (error) {
-    // No typescript
-}
+var sass = require('node-sass');
+var typescript = require('typescript');
+
 // var beautify = require('js-beautify').html;
 
 var sourceDir = './source/';
@@ -115,16 +109,23 @@ function compileFile(source, destination) {
                     }
                 } else {
                     showError('Phazor', 'The typescript package must be installed to compile .ts files.', false);
-
                 }
                 break;
             case '.scss':
                 if (sass) {
                     try {
                         var scss = file.read(source);
+                        // Minify CSS if enabled in options
+                        var minify = 'nested';
+                        if(options){
+                            if(options.minifyCSS == true){
+                                minify = 'compressed';
+                            }
+                        }
                         if (scss != '') {
                             var output = sass.renderSync({
-                                data: scss
+                                data: scss,
+                                outputStyle: minify
                             });
                             file.write(destinationFolder + path.parse(source).name + '.css', output.css);
                         }
