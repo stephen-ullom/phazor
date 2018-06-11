@@ -1,47 +1,135 @@
-var phazor;
-var php;
-var token;
-var closeBracket;
 
 function parse(text) {
+    var phazor = text;
+    var php;
+
+    var options = require('./default.json');
+
     // Remove Comments
-    phazor = text.replace(/\$\*.*?\*\$/g, '');
+    // phazor = text.replace(/\$\*.*?\*\$/g, '');
 
     // Phazor token
     php = '';
-    token = phazor.indexOf('$');
-    closeBracket = phazor.indexOf('}');
+    var token = phazor.match(/\$|\}|\/\*/);
 
-    while (token != -1 || closeBracket != -1) {
+    // console.log(token);
+    while (token != null) {
+        // debug(token.toString());
+        switch (token.toString()) {
+            case '/*':
+                // Output previous php
+                php += phazor.substr(0, token.index);
+                // Cut at token
+                phazor = phazor.substring(token.index);
 
-        // Close bracket exists
-        if (closeBracket != -1) {
-            if (token != -1) {
-                if (closeBracket < token) {
-                    processBracket();
+                // Output comment
+                var closeComment = phazor.indexOf('*/');
+                php += '<?php ' + phazor.substr(0, closeComment + 2) + ' ?>';
+
+                debug(phazor.substr(0, closeComment + 2));
+                phazor = phazor.substr(closeComment + 2);
+                break;
+            case '}':
+                var matchElse = phazor.substr(token.index).match(/^\}\s?else\s?\{/);
+                var matchElseIf = phazor.substr(token.index).match(/^\}\s?else\sif\s?\(.*\)\s?\{/);
+                var matchCatch = phazor.substr(closeBracket).match(/^\}\s?catch\s?\(.*\)\s?\{/);
+
+                // If additional
+                if (matchElse) {
+                    // Output php
+                    php += phazor.substring(0, token.index) + '<?php ' + matchElse.toString() + ' ?>';
+                    // Cut at bracket
+                    phazor = phazor.substr(token.index + matchElse.toString().length);
+                    debug(matchElse.toString());
+                } else if (matchElseIf) {
+                    // Output php
+                    php += phazor.substring(0, token.index) + '<?php ' + matchElseIf.toString() + ' ?>';
+                    // Cut at bracket
+                    phazor = phazor.substr(token.index + matchElseIf.toString().length);
+                    debug(matchElseIf.toString());
+                } else if (matchCatch) {
+                    // Output php
+                    php += phazor.substring(0, token.index) + '<?php ' + matchCatch.toString() + ' ?>';
+                    // Cut at bracket
+                    phazor = phazor.substr(token.index + matchCatch.toString().length);
+                    debug(matchCatch.toString());
+                } else {
+                    // Output php
+                    php += phazor.substring(0, token.index) + '<?php } ?>';
+                    // Cut at bracket
+                    phazor = phazor.substr(token.index + 1);
+                    debug('}');
                 }
-            } else {
-                processBracket();
-            }
-        }
+                break;
+            default:
+                // Must be $
+                // Output php
+                php += phazor.substring(0, token.index);
+                // Cut at token
+                phazor = phazor.substr(token.index + 1);
 
-        // Token exists
-        if (token != -1) {
-            if (closeBracket != -1) {
-                if (token < closeBracket) {
-                    processToken();
+                // Get the following character
+                switch (phazor[0]) {
+                    // case '*':
+                    //     // Comment
+                    //     debug('$*');
+                    //     php += '<?php ';
+                    //     var closeIndex = phazor.indexOf('*$');
+                    //     php += phazor.substr(1, closeIndex);
+                    //     break;
+                    case '{':
+                        // Code block
+                        debug('${');
+                        php += '<?php ';
+                        var closeIndex = containedIndex('{', '}', phazor.substr(1));
+                        php += phazor.substr(1, closeIndex);
+                        php += '?>';
+                        phazor = phazor.substr(closeIndex + 2);
+                        break;
+                    case '(':
+                        // Expression
+                        debug('$(');
+                        php += '<?php echo ';
+                        var closeIndex = containedIndex('(', ')', phazor.substr(1));
+                        php += phazor.substr(1, closeIndex);
+                        php += '; ?>';
+                        phazor = phazor.substr(closeIndex + 2);
+                        break;
+                    case '$':
+                        // Escape entity
+                        debug('$$');
+                        php += '$';
+                        phazor = phazor.substr(1);
+                        break;
+                    default:
+                        // Statement or variable
+                        var expression = phazor.match(/\w+/, token.index).toString();
+                        // If expression is a statement
+                        if (['for', 'foreach', 'function', 'if', 'switch', 'try', 'while'].indexOf(expression) != -1) {
+                            var statement = phazor.substr(0, phazor.indexOf('{') + 1);
+                            debug('$' + statement);
+                            php += '<?php ' + statement + ' ?>';
+                            phazor = phazor.substr(statement.length + 1);
+                        } else {
+                            debug('$' + expression);
+                            php += '<?php echo $' + expression + '; ?>';
+                            phazor = phazor.substr(expression.length);
+                        }
+                        break;
                 }
-            } else {
-                processToken();
-                debug('No close bracket');
-            }
+                break;
         }
-
-        closeBracket = phazor.indexOf('}');
-        token = phazor.indexOf('$');
+        token = phazor.match(/\$|\}|\/\*/);
     }
+
     // Output remaining php
     php += phazor;
+
+    // Remove adjacent tags
+    if (options.adjacentTags == false) {
+        php = php.replace(/\?>(\s*)<\?php/g, '$1');
+    }
+
     // debug(token);
     return php;
 }
@@ -108,92 +196,6 @@ function containedIndex(open, close, string) {
     return closePos;
 }
 
-function processToken() {
-    // Output php
-    php += phazor.substring(0, token);
-    // Cut at token
-    phazor = phazor.substr(token + 1);
-
-    // Get the following character
-    switch (phazor[0]) {
-        // Code block
-        case '{':
-            debug('${');
-            php += '<?php ';
-            var closeIndex = containedIndex('{', '}', phazor.substr(1));
-            php += phazor.substr(1, closeIndex);
-            php += '?>';
-            phazor = phazor.substr(closeIndex + 2);
-            break;
-            // Expression
-        case '(':
-            debug('$(');
-            php += '<?php echo ';
-            var closeIndex = containedIndex('(', ')', phazor.substr(1));
-            php += phazor.substr(1, closeIndex);
-            php += '; ?>';
-            phazor = phazor.substr(closeIndex + 2);
-            break;
-            // Escape entity
-        case '$':
-            debug('$$');
-            php += '$';
-            phazor = phazor.substr(1);
-            break;
-            // Statement or variable
-        default:
-            var expression = phazor.match(/\w+/, token).toString();
-            // If expression is a statement
-            if (['for', 'foreach', 'function', 'if', 'switch', 'try', 'while'].indexOf(expression) != -1) {
-                var statement = phazor.substr(0, phazor.indexOf('{') + 1);
-                debug('$' + statement);
-                php += '<?php ' + statement + ' ?>';
-                phazor = phazor.substr(statement.length + 1);
-            } else {
-                debug('$' + expression);
-                php += '<?php echo $' + expression + '; ?>';
-                phazor = phazor.substr(expression.length);
-            }
-            break;
-    }
-}
-
-function processBracket() {
-    var matchElse = phazor.substr(closeBracket).match(/^\}\s?else\s?\{/);
-    var matchElseIf = phazor.substr(closeBracket).match(/^\}\s?else\sif\s?\(.*\)\s?\{/);
-    var matchCatch = phazor.substr(closeBracket).match(/^\}\s?catch\s?\(.*\)\s?\{/);
-
-    // php += phazor.substring(0, closeBracket);
-    // phazor = phazor.substr(closeBracket);
-
-    if (matchElse) {
-        // Output php
-        php += phazor.substring(0, closeBracket) + '<?php ' + matchElse.toString() + ' ?>';
-        // Cut at bracket
-        phazor = phazor.substr(closeBracket + matchElse.toString().length);
-        debug(matchElse.toString());
-    } else if (matchElseIf) {
-        // Output php
-        php += phazor.substring(0, closeBracket) + '<?php ' + matchElseIf.toString() + ' ?>';
-        // Cut at bracket
-        phazor = phazor.substr(closeBracket + matchElseIf.toString().length);
-        debug(matchElseIf.toString());
-    } else if (matchCatch) {
-        // Output php
-        php += phazor.substring(0, closeBracket) + '<?php ' + matchCatch.toString() + ' ?>';
-        // Cut at bracket
-        phazor = phazor.substr(closeBracket + matchCatch.toString().length);
-        debug(matchCatch.toString());
-    } else {
-        // Output php
-        php += phazor.substring(0, closeBracket) + '<?php } ?>';
-        // Cut at bracket
-        phazor = phazor.substr(closeBracket + 1);
-        debug('}');
-    }
-}
-
-// Enable debug output
 function debug(string) {
     // console.log(string);
 }
