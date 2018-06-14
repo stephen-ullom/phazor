@@ -22,13 +22,15 @@ Install Phazor with NPM ```npm i phazor -g```.
 
 Run the compiler "```phazor sourceFolder destinationFolder```" from the parent directory.
 
+# Links
+
 [NPM Package](https://www.npmjs.com/package/phazor)
 
 [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Slulego.phazor)
 
 [Github Repository](https://github.com/Slulego/Phazor)
 
-
+# Overview
 
 Add PHP code using the `$` symbol.
 
@@ -107,9 +109,7 @@ Compiles to:
 <p>That fruit will cost you $1.99 each.</p>
 ```
 
----
-
-## Basic Example
+# Basic Example
 
 Install Phazor with NPM `npm i phazor -g`.
 
