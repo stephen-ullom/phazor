@@ -1,4 +1,3 @@
-
 function parse(text) {
     var phazor = text;
     var php;
@@ -32,7 +31,7 @@ function parse(text) {
             case '}':
                 var matchElse = phazor.substr(token.index).match(/^\}\s?else\s?\{/);
                 var matchElseIf = phazor.substr(token.index).match(/^\}\s?else\sif\s?\(.*\)\s?\{/);
-                var matchCatch = phazor.substr(closeBracket).match(/^\}\s?catch\s?\(.*\)\s?\{/);
+                var matchCatch = phazor.substr(token.index).match(/^\}\s?catch\s?\(.*\)\s?\{/);
 
                 // If additional
                 if (matchElse) {
@@ -82,6 +81,7 @@ function parse(text) {
                         debug('${');
                         php += '<?php ';
                         var closeIndex = containedIndex('{', '}', phazor.substr(1));
+                        //containers('{', '}', phazor.substr(1));
                         php += phazor.substr(1, closeIndex);
                         php += '?>';
                         phazor = phazor.substr(closeIndex + 2);
@@ -135,65 +135,126 @@ function parse(text) {
 }
 
 function containedIndex(open, close, string) {
+    var depth = 0;
+    var search = true;
+
     var openPos = string.indexOf(open);
     var closePos = string.indexOf(close);
-    var depth = 0;
+
+    // debug(strings);
+    // Almost works...
+    //(\})(?=(?:[^'"]|["'][^'"]*["'])*$)
+
+    // Selectes anything between qoutes
+    //(["'])(?:(?=(\\?))\2.)*?\1
+
     // If both tokens exist
     do {
         if (openPos != -1 && closePos != -1) {
             // If open token comes first
             // debug(openPos + ' < ' + closePos);
             if (openPos < closePos) {
-                // Debug depth
-                var output = '';
-                for (let index = 0; index <= depth; index++) {
-                    output += '-';
-                }
-                debug(output + open);
+                // Open {
+                if (outsideQuotes(openPos, string)) {
 
-                depth++;
-                // Set new positions
-                closePos = string.indexOf(close, openPos + 1);
-                openPos = string.indexOf(open, openPos + 1);
+                    debug('outside {');
+                    // Debug depth
+                    var output = '';
+                    for (let index = 0; index <= depth; index++) {
+                        output += '-';
+                    }
+                    debug(output + open);
+
+                    depth++;
+                    // Set new positions
+                    closePos = string.indexOf(close, openPos + 1);
+                    openPos = string.indexOf(open, openPos + 1);
+                } else {
+                    debug('quoted {');
+                    // Set new position
+                    openPos = string.indexOf(open, openPos + 1);
+                }
             } else {
-                depth--;
-                // Debug depth
-                var output = '';
-                for (let index = 0; index <= depth; index++) {
-                    output += '-';
-                }
-                debug(output + close);
+                // Close }
+                if (outsideQuotes(closePos, string)) {
 
-                // Set new positions
-                if (depth > -1) {
-                    openPos = string.indexOf(open, closePos + 1);
+                    debug('outside }');
+                    depth--;
+                    // Debug depth
+                    var output = '';
+                    for (let index = 0; index <= depth; index++) {
+                        output += '-';
+                    }
+                    debug(output + close);
+                    // Set new positions
+                    if (depth > -1) {
+                        openPos = string.indexOf(open, closePos + 1);
+                        closePos = string.indexOf(close, closePos + 1);
+                    }
+                } else {
+                    debug('quoted }');
                     closePos = string.indexOf(close, closePos + 1);
                 }
+
             }
         } else if (closePos != -1) {
             if (depth > 0) {
-                // Debug depth
-                var output = '';
-                for (let index = 0; index < depth; index++) {
-                    output += '-';
-                }
-                debug(output + close);
+                if (outsideQuotes(closePos, string)) {
+                    debug('outside }');
 
-                depth--;
+                    // Debug depth
+                    var output = '';
+                    for (let index = 0; index < depth; index++) {
+                        output += '-';
+                    }
+                    debug(output + close);
+
+                    depth--;
+                } else {
+                    debug('quoted }');
+                }
                 closePos = string.indexOf(close, closePos + 1);
+            } else {
+                if (outsideQuotes(closePos, string)) {
+                    search = false;
+                    if (closePos == -1) {
+                        debug('Missing closing ' + close);
+                    }
+                } else {
+                    debug('quoted }');
+                    closePos = string.indexOf(close, closePos + 1);
+                }
             }
         } else {
+            debug('what');
+            // Close }
             depth = 0;
+            search = false;
             if (closePos == -1) {
-                debug('Missing ' + close);
+                debug('Missing closing ' + close);
             }
         }
-    } while (depth > 0);
+    } while (search);
 
     // closePos = string.indexOf(close, closePos + 1);
     // debug(closePos);
     debug(close);
     return closePos;
+}
+
+function outsideQuotes(position, string) {
+    var reg = /([\"\'])(?:(?=(\\?))\2.)*?\1/g;
+    var output = true;
+    while ((match = reg.exec(string)) != null) {
+        // debug("match: " + match.index + ' ' + (match.index + match.toString().length));
+        // debug(position);
+        if (position > match.index && position < (match.index + match.toString().length)) {
+            // debug('inside');
+            output = false;
+        } else {}
+        // debug(output);
+    }
+    return output;
 }
 
 function debug(string) {
