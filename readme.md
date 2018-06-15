@@ -208,6 +208,3 @@ Which renders in the browser:
 >- Grapes
 >
 >All these fruits together will cost $100.
-
-
-Todo: Escape brackets within quotes.

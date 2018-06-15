@@ -1,6 +1,6 @@
 {
     "name": "phazor",
-    "version": "0.1.2",
+    "version": "0.2.0",
     "description": "A quicker PHP syntax similar to Razor Web Pages.",
     "main": "index.js",
     "repository": {
