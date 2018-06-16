@@ -1,19 +1,18 @@
 function parse(text) {
     var phazor = text;
-    var php;
 
     var options = require('./default.json');
 
     // Remove Comments
-    // phazor = text.replace(/\$\*.*?\*\$/g, '');
+    if(options.comments == false) {
+        phazor = text.replace(/\/\*.*?\*\//g, '');
+    }
 
     // Phazor token
-    php = '';
+    var php = '';
     var token = phazor.match(/\$|\}|\/\*/);
 
-    // console.log(token);
     while (token != null) {
-        // debug(token.toString());
         switch (token.toString()) {
             case '/*':
                 // Output previous php
@@ -29,6 +28,7 @@ function parse(text) {
                 phazor = phazor.substr(closeComment + 2);
                 break;
             case '}':
+                // End statement
                 var matchElse = phazor.substr(token.index).match(/^\}\s?else\s?\{/);
                 var matchElseIf = phazor.substr(token.index).match(/^\}\s?else\sif\s?\(.*\)\s?\{/);
                 var matchCatch = phazor.substr(token.index).match(/^\}\s?catch\s?\(.*\)\s?\{/);
@@ -61,7 +61,8 @@ function parse(text) {
                 }
                 break;
             default:
-                // Must be $
+                // Token must be $
+
                 // Output php
                 php += phazor.substring(0, token.index);
                 // Cut at token
@@ -80,8 +81,8 @@ function parse(text) {
                         // Code block
                         debug('${');
                         php += '<?php ';
-                        var closeIndex = containedIndex('{', '}', phazor.substr(1));
-                        //containers('{', '}', phazor.substr(1));
+                        var closeIndex = findClosing('{', '}', phazor.substr(1));
+
                         php += phazor.substr(1, closeIndex);
                         php += '?>';
                         phazor = phazor.substr(closeIndex + 2);
@@ -90,7 +91,8 @@ function parse(text) {
                         // Expression
                         debug('$(');
                         php += '<?php echo ';
-                        var closeIndex = containedIndex('(', ')', phazor.substr(1));
+                        var closeIndex = findClosing('(', ')', phazor.substr(1));
+
                         php += phazor.substr(1, closeIndex);
                         php += '; ?>';
                         phazor = phazor.substr(closeIndex + 2);
@@ -106,7 +108,10 @@ function parse(text) {
                         var expression = phazor.match(/\w+/, token.index).toString();
                         // If expression is a statement
                         if (['for', 'foreach', 'function', 'if', 'switch', 'try', 'while'].indexOf(expression) != -1) {
-                            var statement = phazor.substr(0, phazor.indexOf('{') + 1);
+                            // Find first { that is not inside quotes
+                            var closePos = phazor.match(/(?:.*?\(.*?\))\s*\{/);
+
+                            var statement = phazor.substr(0, closePos.toString().length);
                             debug('$' + statement);
                             php += '<?php ' + statement + ' ?>';
                             phazor = phazor.substr(statement.length + 1);
@@ -126,133 +131,71 @@ function parse(text) {
     php += phazor;
 
     // Remove adjacent tags
-    if (options.adjacentTags == false) {
+    if (options.adjacentPHP == false) {
         php = php.replace(/\?>(\s*)<\?php/g, '$1');
     }
 
-    // debug(token);
     return php;
 }
 
-function containedIndex(open, close, string) {
+function findClosing(open, close, string) {
     var depth = 0;
-    var search = true;
+    var scanPos = 0;
+    // Example regex /\{|\}/
+    var regex = new RegExp('\\' + open + '|\\' + close);
+    var token = regex.exec(string);
 
-    var openPos = string.indexOf(open);
-    var closePos = string.indexOf(close);
-
-    // debug(strings);
-    // Almost works...
-    //(\})(?=(?:[^'"]|["'][^'"]*["'])*$)
-
-    // Selectes anything between qoutes
-    //(["'])(?:(?=(\\?))\2.)*?\1
-
-    // If both tokens exist
-    do {
-        if (openPos != -1 && closePos != -1) {
-            // If open token comes first
-            // debug(openPos + ' < ' + closePos);
-            if (openPos < closePos) {
-                // Open {
-                if (outsideQuotes(openPos, string)) {
-
-                    debug('outside {');
+    while (token != null) {
+        if (outsideQuotes(token.index, string)) {
+            switch (token.toString()) {
+                case open:
                     // Debug depth
                     var output = '';
                     for (let index = 0; index <= depth; index++) {
                         output += '-';
                     }
-                    debug(output + open);
+                    debug(output + token);
 
                     depth++;
-                    // Set new positions
-                    closePos = string.indexOf(close, openPos + 1);
-                    openPos = string.indexOf(open, openPos + 1);
-                } else {
-                    debug('quoted {');
-                    // Set new position
-                    openPos = string.indexOf(open, openPos + 1);
-                }
-            } else {
-                // Close }
-                if (outsideQuotes(closePos, string)) {
 
-                    debug('outside }');
-                    depth--;
-                    // Debug depth
-                    var output = '';
-                    for (let index = 0; index <= depth; index++) {
-                        output += '-';
-                    }
-                    debug(output + close);
-                    // Set new positions
-                    if (depth > -1) {
-                        openPos = string.indexOf(open, closePos + 1);
-                        closePos = string.indexOf(close, closePos + 1);
-                    }
-                } else {
-                    debug('quoted }');
-                    closePos = string.indexOf(close, closePos + 1);
-                }
+                    break;
+                case close:
+                    if (depth > 0) {
 
-            }
-        } else if (closePos != -1) {
-            if (depth > 0) {
-                if (outsideQuotes(closePos, string)) {
-                    debug('outside }');
-
-                    // Debug depth
-                    var output = '';
-                    for (let index = 0; index < depth; index++) {
-                        output += '-';
+                        depth--;
+                    
+                        // Debug depth
+                        var output = '';
+                        for (let index = 0; index <= depth; index++) {
+                            output += '-';
+                        }
+                        debug(output + token);
+                    } else {
+                        debug(close);
+                        return scanPos + token.index;
                     }
-                    debug(output + close);
-
-                    depth--;
-                } else {
-                    debug('quoted }');
-                }
-                closePos = string.indexOf(close, closePos + 1);
-            } else {
-                if (outsideQuotes(closePos, string)) {
-                    search = false;
-                    if (closePos == -1) {
-                        debug('Missing closing ' + close);
-                    }
-                } else {
-                    debug('quoted }');
-                    closePos = string.indexOf(close, closePos + 1);
-                }
+                    break;
             }
         } else {
-            debug('what');
-            // Close }
-            depth = 0;
-            search = false;
-            if (closePos == -1) {
-                debug('Missing closing ' + close);
-            }
+            debug('inside quotes ' + token.toString());
         }
-    } while (search);
-
-    // closePos = string.indexOf(close, closePos + 1);
-    // debug(closePos);
-    debug(close);
-    return closePos;
+        scanPos += token.index + 1;
+        string = string.substr(token.index + 1);
+        // Find next token
+        token = regex.exec(string);
+    }
+    console.log('Missing end }');
 }
 
 function outsideQuotes(position, string) {
+    // Find all quotes
     var reg = /([\"\'])(?:(?=(\\?))\2.)*?\1/g;
+    // Default to outside quotes
     var output = true;
     while ((match = reg.exec(string)) != null) {
-        // debug("match: " + match.index + ' ' + (match.index + match.toString().length));
-        // debug(position);
-        if (position > match.index && position < (match.index + match.toString().length)) {
-            // debug('inside');
+        if (position > match.index && position < (match.index + match[0].toString().length)) {
             output = false;
-        } else {}
-        // debug(output);
+        }
     }
     return output;
 }

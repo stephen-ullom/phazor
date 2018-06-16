@@ -1,4 +1,5 @@
 {
     "minifyCSS": true,
-    "adjacentTags": true
+    "adjacentPHP": true,
+    "comments": true
 }

@@ -1,3 +1,7 @@
+## Version 0.3.0
+
+Major bug fixes and optimizations.
+
 ## Version 0.2.0
 
 Fixed brackets inside quotes.
