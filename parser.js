@@ -141,12 +141,13 @@ function parse(text) {
 function findClosing(open, close, string) {
     var depth = 0;
     var scanPos = 0;
+    var scanString = string;
     // Example regex /\{|\}/
     var regex = new RegExp('\\' + open + '|\\' + close);
-    var token = regex.exec(string);
+    var token = regex.exec(scanString);
 
     while (token != null) {
-        if (outsideQuotes(token.index, string)) {
+        if (outsideQuotes(scanPos + token.index, string)) {
             switch (token.toString()) {
                 case open:
                     // Debug depth
@@ -180,9 +181,9 @@ function findClosing(open, close, string) {
             debug('inside quotes ' + token.toString());
         }
         scanPos += token.index + 1;
-        string = string.substr(token.index + 1);
+        scanString = scanString.substr(token.index + 1);
         // Find next token
-        token = regex.exec(string);
+        token = regex.exec(scanString);
     }
     console.log('Missing end }');
 }
@@ -194,6 +195,7 @@ function outsideQuotes(position, string) {
     var output = true;
     while ((match = reg.exec(string)) != null) {
         if (position > match.index && position < (match.index + match[0].toString().length)) {
+            // debug(string.substr(match.index,match.index + match[0].toString().length));
             output = false;
         }
     }
