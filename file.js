@@ -48,7 +48,7 @@ function showMessage(type, message) {
             break;
         case 'folder':
             // Yellow
-            color = '1;33';
+            color = '1;32';
             break;
         case 'delete':
             // Red
