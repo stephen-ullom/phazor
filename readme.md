@@ -26,9 +26,9 @@ Run the compiler "```phazor sourceFolder destinationFolder```" from the parent d
 
 [NPM Package](https://www.npmjs.com/package/phazor)
 
-[Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=Slulego.phazor)
+[Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=slulego.phazor)
 
-[Github Repository](https://github.com/Slulego/Phazor)
+[Github Repository](https://github.com/slulego/phazor)
 
 # Overview
 
